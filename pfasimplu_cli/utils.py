@@ -34,7 +34,9 @@ def create_excel(data: list[dict], output_path: str | Path) -> str:
             cell.font = header_font
 
         for i, column in enumerate(df.columns):
-            max_data_len = df[column].astype(str).map(len).max()
+            # pandas >= 3 keeps missing values as NA when casting to string and
+            # ``len()`` raises on those; ``str.len()`` returns NA instead.
+            max_data_len = df[column].astype("string").str.len().max()
             header_len = len(str(column))
 
             if pd.isna(max_data_len):

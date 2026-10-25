@@ -465,7 +465,7 @@ class AgentBonuriFiscale:
             )
         except Exception as ex:
             log.exception(ex)
-            return
+            raise
 
     def cleanup(self):
         safe_rmtree(self.shared_dir)

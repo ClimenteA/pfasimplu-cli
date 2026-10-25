@@ -9,7 +9,6 @@ from datetime import date
 from pathlib import Path
 from typing import Optional
 
-from cursvalutarbnr import Currency, ron_exchange_rate
 from google import genai
 from google.genai import types
 from joblib import Parallel, delayed
@@ -18,6 +17,7 @@ from pydantic import BaseModel, Field, model_validator
 from tenacity import retry, stop_after_attempt, stop_after_delay, wait_random
 from unidecode import unidecode
 
+from pfasimplu_cli.exchange_rates import Currency, ron_exchange_rate
 from pfasimplu_cli.ocr import ExtractedTextResponse, extract_text
 from pfasimplu_cli.utils import (
     create_excel,
@@ -136,24 +136,33 @@ class FacturaFiscalaSchema(BaseModel):
         if self.data_emitere > self.data_scadenta:
             self.data_scadenta = self.data_emitere
 
-        if self.valuta != "RON":
-            if self.total_de_plata and not self.total_de_plata_in_ron:
-                self.total_de_plata_in_ron = ron_exchange_rate(
-                    amount=self.total_de_plata,
-                    currency=self.valuta,
-                    date=self.data_emitere,
-                )
-            if self.valoare_tva and not self.valoare_tva_in_ron:
-                self.valoare_tva_in_ron = ron_exchange_rate(
-                    amount=self.valoare_tva,
-                    currency=self.valuta,
-                    date=self.data_emitere,
-                )
-        else:
+        if self.valuta == "RON":
             self.total_de_plata_in_ron = self.total_de_plata
             self.valoare_tva_in_ron = self.valoare_tva
 
         return self
+
+    def converteste_in_ron(self) -> None:
+        """Populate the RON amounts for invoices issued in another currency.
+
+        Kept outside the pydantic validator so a BNR/network hiccup does not
+        force a retry of the (expensive) LLM extraction.
+        """
+        if self.valuta == "RON":
+            return
+
+        if self.total_de_plata and not self.total_de_plata_in_ron:
+            self.total_de_plata_in_ron = ron_exchange_rate(
+                amount=self.total_de_plata,
+                currency=self.valuta,
+                date=self.data_emitere,
+            )
+        if self.valoare_tva and not self.valoare_tva_in_ron:
+            self.valoare_tva_in_ron = ron_exchange_rate(
+                amount=self.valoare_tva,
+                currency=self.valuta,
+                date=self.data_emitere,
+            )
 
 
 class FacturaBatch(BaseModel):
@@ -428,6 +437,8 @@ class AgentFacturiFiscale:
             factura.valoare_tva = 0
             factura.valoare_tva_in_ron = 0
             factura.produse_sau_servicii = "STORNO - factura neincasata"
+        else:
+            factura.converteste_in_ron()
 
         return FacturaBatch(factura_fiscala=factura)
 
@@ -666,7 +677,7 @@ class AgentFacturiFiscale:
 
         except Exception as ex:
             log.exception(ex)
-            return
+            raise
 
     def cleanup(self):
         safe_rmtree(self.shared_dir)

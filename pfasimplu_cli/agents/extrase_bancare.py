@@ -9,7 +9,6 @@ from decimal import ROUND_HALF_UP, Decimal
 from pathlib import Path
 from typing import Generator, Optional
 
-from cursvalutarbnr import Currency, ron_exchange_rate
 from google import genai
 from google.genai import types
 from joblib import Parallel, delayed
@@ -19,6 +18,7 @@ from pypdf import PdfReader
 from tenacity import retry, stop_after_attempt, stop_after_delay, wait_random
 from unidecode import unidecode
 
+from pfasimplu_cli.exchange_rates import Currency, ron_exchange_rate
 from pfasimplu_cli.utils import (
     create_excel,
     extract_json_from_llm_response,
@@ -821,7 +821,7 @@ class AgentExtraseBancare:
             )
         except Exception as ex:
             log.exception(ex)
-            return
+            raise
 
     def cleanup(self):
         safe_rmtree(self.shared_dir)

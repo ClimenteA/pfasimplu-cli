@@ -18,7 +18,7 @@ dependencies = [
     "rapidfuzz>=3.14.3",
     "tenacity>=9.1.2",
     "unidecode>=1.4.0",
-    "cursvalutarbnr==1.0.5",
+    "cursvalutarbnr>=1.0.6",
     "python-dateutil>=2.9.0",
     "tomli-w>=1.1.0",
     "python-dotenv>=1.1.1",
