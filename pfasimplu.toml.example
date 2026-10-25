@@ -1,0 +1,18 @@
+# Copy to pfasimplu.toml or let `pfasimplu init` create it.
+
+[company]
+nume_firma = "PFA Exemplu"
+cui_cif = "1234567890"
+cod_tva = ""
+
+[processing]
+model = "gemini-3.8-flash"
+output_dir = "./output"
+keep_workdir = false
+
+[gemini]
+# Name of the environment variable that holds the key.
+api_key_env = "GOOGLE_GENAI_KEY"
+# Prefer the environment or .env file. Only set this if you accept storing
+# the key in plain text on disk.
+# api_key = "..."
