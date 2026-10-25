@@ -1,1 +1,1 @@
-# pfasimplu-ai
+# pfasimplu-cli
