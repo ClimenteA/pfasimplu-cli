@@ -8,23 +8,76 @@ reports, registers, configuration and logs stay on your machine.
 
 ---
 
-## Quick start
+## One-command install
+
+**Ubuntu / Debian / macOS** (POSIX shell):
 
 ```bash
-cd pfasimplu-cli
-
-# 1. Install
-uv sync
-
-# 2. Add the Gemini key
-cp .env.example .env
-$EDITOR .env                      # set GOOGLE_GENAI_KEY=...
-
-# 3. Process a ZIP
-uv run pfasimplu-cli process ./documente.zip
+curl -LsSf https://raw.githubusercontent.com/ClimenteA/pfasimplu-cli/main/install.sh | sh
 ```
 
-The first `process` run in a directory without `pfasimplu.toml` asks a few
+**Windows** (PowerShell):
+
+```powershell
+irm https://raw.githubusercontent.com/ClimenteA/pfasimplu-cli/main/install.ps1 | iex
+```
+
+The installer downloads `uv` when needed, installs `pfasimplu-cli` in an
+isolated `uv tool` environment, and prints the next steps. Then:
+
+```bash
+pfasimplu-cli init                   # write pfasimplu.toml
+export GOOGLE_GENAI_KEY="your-key"   # or put it in ./.env
+pfasimplu-cli doctor                 # verify config, key and dependencies
+pfasimplu-cli process ./documente.zip
+```
+
+Installer options (when piping, pass them after `sh -s --` on Unix):
+
+| Option | Description |
+| --- | --- |
+| `--ref REF` | branch, tag or commit to install (default: `main`) |
+| `--upgrade` | reinstall/refresh an existing installation |
+| `--python PY` | Python version for the tool environment (default: `3.12`) |
+| `--repo URL` | install from a fork (git URL, or a local path) |
+| `--help` | show the installer help |
+
+Unix installers can also be configured with `PFASIMPLU_REPO_URL`,
+`PFASIMPLU_REF` and `PFASIMPLU_PYTHON`; the PowerShell installer reads the same
+variables.
+
+### Uninstall
+
+```bash
+# Ubuntu / macOS
+curl -LsSf https://raw.githubusercontent.com/ClimenteA/pfasimplu-cli/main/uninstall.sh | sh
+
+# Windows PowerShell
+irm https://raw.githubusercontent.com/ClimenteA/pfasimplu-cli/main/uninstall.ps1 | iex
+```
+
+This removes the CLI installed with `uv tool`. `uv` itself and your `.env` are
+left alone. Generated registers stay in `./output`; add `--purge-data` to also
+remove `./pfasimplu.toml` and `./output` from the current directory.
+
+---
+
+## Quick start
+
+After the one-command install:
+
+```bash
+# 1. Add the Gemini key in the folder where you run the CLI
+printf 'GOOGLE_GENAI_KEY=your-key-here\n' > .env
+
+# 2. Create pfasimplu.toml (interactive)
+pfasimplu-cli init
+
+# 3. Process a ZIP
+pfasimplu-cli process ./documente.zip
+```
+
+The first `process` run in a directory without `pfasimplu.toml` also asks a few
 questions and writes the config there. Later runs reuse it.
 
 The result is written to `./output/`:
@@ -114,6 +167,10 @@ timing and paths is written next to it.
 
 ## Installation
 
+For normal use, prefer the [one-command installer](#one-command-install) above.
+The manual route below is useful for development or when you already have a
+checkout.
+
 Requirements:
 
 - Python 3.12+
@@ -159,7 +216,6 @@ The questionnaire asks for:
 - VAT code (optional)
 - Gemini model (default: `gemini-3.8-flash`)
 - output directory (default: `./output`)
-- name of the environment variable that holds the Gemini key
 
 Overwrite an existing config with:
 
@@ -187,19 +243,16 @@ output_dir = "./output"
 keep_workdir = false
 
 [gemini]
-api_key_env = "GOOGLE_GENAI_KEY"
-# api_key = "..."   # optional; environment/.env is preferred
+# api_key = "..."   # optional; GOOGLE_GENAI_KEY in environment/.env is preferred
 ```
 
 `[company].nume_firma` and `[company].cui_cif` are required.
 
 ### Credentials
 
-The key is read from the environment or from `.env` in the current directory
-(and next to the config file). Either variable name works:
-
-- `GOOGLE_GENAI_KEY` — default
-- `GEMINI_API_KEY` — also accepted
+The key is read from `GOOGLE_GENAI_KEY` in the environment or from `.env` in
+the current directory (and next to the config file). No other variable name is
+recognised.
 
 Example `.env`:
 
@@ -361,7 +414,7 @@ Gemini vision, replacing the old DocumentAI OCR step.
 | Problem | Fix |
 | --- | --- |
 | `No pfasimplu.toml found` | Run `pfasimplu-cli init`, or run `process` from an interactive terminal so the questionnaire can start. |
-| `Gemini API key not found` | Copy `.env.example` to `.env`, add the key, or export `GOOGLE_GENAI_KEY` / `GEMINI_API_KEY`. |
+| `Gemini API key not found` | Copy `.env.example` to `.env` and set `GOOGLE_GENAI_KEY`, export it, or add `[gemini].api_key` to `pfasimplu.toml`. |
 | `Config error` | Check `[company].nume_firma` and `[company].cui_cif` in `pfasimplu.toml`. |
 | A single bad document | It is logged and skipped; the rest of the job continues. |
 | Non-RON documents | BNR exchange rates are fetched online. Without internet those conversions may fail. |

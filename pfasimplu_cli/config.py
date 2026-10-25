@@ -33,7 +33,6 @@ class ProcessingConfig:
 
 @dataclass
 class GeminiConfig:
-    api_key_env: str = "GOOGLE_GENAI_KEY"
     api_key: str | None = None
 
 
@@ -45,18 +44,12 @@ class AppConfig:
     path: Path | None = None
 
     def get_api_key(self) -> str:
-        """Return the Gemini API key from the configured env var or TOML."""
-        env_name = self.gemini.api_key_env or "GOOGLE_GENAI_KEY"
-        key = (
-            os.getenv(env_name)
-            or os.getenv("GOOGLE_GENAI_KEY")
-            or os.getenv("GEMINI_API_KEY")
-            or self.gemini.api_key
-        )
+        """Return the Gemini API key from GOOGLE_GENAI_KEY or the TOML file."""
+        key = os.getenv("GOOGLE_GENAI_KEY") or self.gemini.api_key
         if not key:
             raise ConfigError(
-                "Gemini API key not found. Set GOOGLE_GENAI_KEY (or GEMINI_API_KEY) "
-                "in your environment/.env, or add [gemini].api_key to pfasimplu.toml."
+                "Gemini API key not found. Set GOOGLE_GENAI_KEY in your "
+                "environment/.env, or add [gemini].api_key to pfasimplu.toml."
             )
         return key
 
@@ -137,10 +130,7 @@ def load_config(explicit: str | Path | None = None) -> AppConfig:
     )
 
     gemini_raw = raw.get("gemini") or {}
-    gemini = GeminiConfig(
-        api_key_env=str(gemini_raw.get("api_key_env") or "GOOGLE_GENAI_KEY"),
-        api_key=gemini_raw.get("api_key"),
-    )
+    gemini = GeminiConfig(api_key=gemini_raw.get("api_key"))
 
     return AppConfig(
         company=company,
@@ -157,7 +147,7 @@ def config_to_dict(config: AppConfig) -> dict[str, Any]:
         "keep_workdir": config.processing.keep_workdir,
     }
 
-    gemini: dict[str, Any] = {"api_key_env": config.gemini.api_key_env}
+    gemini: dict[str, Any] = {}
     if config.gemini.api_key:
         gemini["api_key"] = config.gemini.api_key
 

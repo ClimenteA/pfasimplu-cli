@@ -28,7 +28,7 @@ def make_config() -> AppConfig:
             output_dir="./out",
             keep_workdir=False,
         ),
-        gemini=GeminiConfig(api_key_env="GOOGLE_GENAI_KEY"),
+        gemini=GeminiConfig(),
     )
 
 
@@ -61,18 +61,20 @@ def test_missing_required_company_fields(tmp_path: Path) -> None:
 
 def test_api_key_from_environment(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("GOOGLE_GENAI_KEY", raising=False)
-    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
     config = make_config()
-    monkeypatch.setenv("GEMINI_API_KEY", "from-gemini")
-    assert config.get_api_key() == "from-gemini"
-
     monkeypatch.setenv("GOOGLE_GENAI_KEY", "from-google")
     assert config.get_api_key() == "from-google"
 
 
+def test_gemini_api_key_alias_is_ignored(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("GOOGLE_GENAI_KEY", raising=False)
+    monkeypatch.setenv("GEMINI_API_KEY", "from-gemini")
+    with pytest.raises(ConfigError):
+        make_config().get_api_key()
+
+
 def test_api_key_missing(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("GOOGLE_GENAI_KEY", raising=False)
-    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
     with pytest.raises(ConfigError):
         make_config().get_api_key()
 

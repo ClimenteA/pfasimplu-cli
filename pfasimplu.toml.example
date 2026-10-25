@@ -11,8 +11,6 @@ output_dir = "./output"
 keep_workdir = false
 
 [gemini]
-# Name of the environment variable that holds the key.
-api_key_env = "GOOGLE_GENAI_KEY"
-# Prefer the environment or .env file. Only set this if you accept storing
-# the key in plain text on disk.
+# Prefer GOOGLE_GENAI_KEY in the environment or .env file.
+# Only set api_key if you accept storing the key in plain text on disk.
 # api_key = "..."

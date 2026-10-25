@@ -88,13 +88,10 @@ def _questionnaire(existing: AppConfig | None = None) -> AppConfig:
         "Director pentru rezultate",
         default=processing.output_dir or "./output",
     ).strip()
-    api_key_env = typer.prompt(
-        "Numele variabilei de environment pentru cheia Gemini",
-        default=gemini.api_key_env or "GOOGLE_GENAI_KEY",
-    ).strip()
 
     typer.secho(
-        f"\nCheia Gemini se citeste din environment sau din {ENV_FILE}. Exemplu: {api_key_env}=...",
+        f"\nCheia Gemini se citeste din environment sau din {ENV_FILE}. "
+        "Exemplu: GOOGLE_GENAI_KEY=...",
         fg=typer.colors.YELLOW,
     )
 
@@ -109,7 +106,7 @@ def _questionnaire(existing: AppConfig | None = None) -> AppConfig:
             output_dir=output_dir,
             keep_workdir=processing.keep_workdir,
         ),
-        gemini=GeminiConfig(api_key_env=api_key_env, api_key=gemini.api_key),
+        gemini=GeminiConfig(api_key=gemini.api_key),
     )
 
 
