@@ -1,6 +1,7 @@
 import hashlib
 import os
 import pathlib
+import re
 import uuid
 import zipfile
 from dataclasses import dataclass
@@ -28,6 +29,33 @@ from pfasimplu_cli.utils import (
 )
 
 from .common import RaspunsRaport
+
+# Conturile de TVA ale Trezoreriei Statului: incep cu RO, codul bancar TREZ
+# urmat de 3 cifre, contin "20A100101" si se termina in "XTVA"
+# Ex: RO12TREZ70020A100101XTVA
+IBAN_TVA_REGEX = re.compile(
+    r"RO\d{2}TREZ\d{3}[0-9A-Z]*20A100101[0-9A-Z]*XTVA\b", re.IGNORECASE
+)
+
+
+def este_iban_plata_tva(iban: Optional[str]) -> bool:
+    """Verifica daca un IBAN este contul de TVA al Trezoreriei Statului.
+
+    Contul trebuie sa inceapa cu RO, sa contina 'TREZ' urmat de 3 cifre,
+    sa contina '20A100101' si sa se termine in 'XTVA'.
+    """
+    if not iban:
+        return False
+
+    text = iban.upper()
+    iban_fara_spatii = re.sub(r"\s+", "", text)
+
+    # Cautam si in textul original (pentru IBAN-uri inglobate in descrieri,
+    # unde 'XTVA' e urmat de separator) si in cel fara spatii (pentru
+    # IBAN-uri grupate cu spatii, unde 'XTVA' e la final)
+    return bool(
+        IBAN_TVA_REGEX.search(text) or IBAN_TVA_REGEX.search(iban_fara_spatii)
+    )
 
 
 class PDFFile(BaseModel):
@@ -118,6 +146,10 @@ class TranzactieSchema(BaseModel):
         default=0,
         description="Comisionul bancar deductibil in RON. Daca contul bancar este in USD suma va fi convertita in RON. Nu completa acest camp.",
     )
+    plata_tva_deductibila_in_ron: Optional[float] = Field(
+        default=0,
+        description="Plata TVA deductibila in RON catre Trezoreria Statului (IBAN-ul destinatarului contine 'RO', 'TREZ' urmat de 3 cifre, '20A100101' si se termina in 'XTVA'). Daca contul bancar este in alta valuta suma va fi convertita in RON. Nu completa acest camp.",
+    )
 
 
 class ExtrasBancarSchema(BaseModel):
@@ -156,6 +188,8 @@ class ExtrasBancarLineSchema(BaseModel):
     curs_bnr: Optional[float]
     diferenta_curs_valutar: Optional[float]
     comision_bancar: Optional[float]
+    # Optional cu default pentru compatibilitate cu rapoartele Excel mai vechi
+    plata_tva: Optional[float] = None
 
 
 @dataclass
@@ -400,6 +434,7 @@ class AgentExtraseBancare:
         • suma_credit_in_ron
         • diferenta_curs_valutar_deductibila_in_ron
         • comision_bancar_deductibil_in_ron
+        • plata_tva_deductibila_in_ron
 
         Lasă aceste câmpuri ca None în JSON.
 
@@ -519,6 +554,24 @@ class AgentExtraseBancare:
                                 currency=valuta_cont,
                                 date=tranzactie.data_transfer,
                             )
+                        )
+
+                # Adauga platile de TVA catre Trezoreria Statului (cheltuiala deductibila)
+                # IBAN-ul destinatarului contine 'RO', 'TREZ' urmat de 3 cifre,
+                # '20A100101' si se termina in 'XTVA'
+                iban_destinatar = (
+                    tranzactie.iban_din_descriere_transfer
+                    or tranzactie.descriere_transfer
+                )
+                if este_iban_plata_tva(iban_destinatar) and tranzactie.suma_debit:
+                    if valuta_cont == "RON":
+                        tranzactie.plata_tva_deductibila_in_ron = tranzactie.suma_debit
+
+                    if valuta_cont != "RON":
+                        tranzactie.plata_tva_deductibila_in_ron = ron_exchange_rate(
+                            amount=tranzactie.suma_debit,
+                            currency=valuta_cont,
+                            date=tranzactie.data_transfer,
                         )
 
                 # Calculeaza diferente curs valutar
@@ -790,6 +843,7 @@ class AgentExtraseBancare:
                         curs_bnr=item.curs_valutar_bnr,
                         diferenta_curs_valutar=item.diferenta_curs_valutar_deductibila_in_ron,
                         comision_bancar=item.comision_bancar_deductibil_in_ron,
+                        plata_tva=item.plata_tva_deductibila_in_ron,
                     )
                     rows.append(row)
 

@@ -1,6 +1,8 @@
 pfasimplu.toml
 output/
 work/
+stocare
+
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

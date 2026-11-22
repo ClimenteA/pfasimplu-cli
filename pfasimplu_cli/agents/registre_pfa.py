@@ -560,7 +560,7 @@ class AgentRegistrePFA:
 
         return rows
 
-    def preia_comisioane_diferente_schimb_valutar_din_extrase_bancare(
+    def preia_cheltuieli_deductibile_din_extrase_bancare(
         self, anul: int, rapoarte_grupate_pe_ani: ReportsDataByYear
     ):
         rows: list[RegistrulJurnalIncasariSiPlatiSchema] = []
@@ -575,6 +575,10 @@ class AgentRegistrePFA:
             if extras.diferenta_curs_valutar:
                 tip_cheltuiala = "Diferente curs valutar"
                 plati_banca = extras.diferenta_curs_valutar
+
+            if extras.plata_tva:
+                tip_cheltuiala = "Plata TVA"
+                plati_banca = extras.plata_tva
 
             if not tip_cheltuiala:
                 continue
@@ -628,12 +632,12 @@ class AgentRegistrePFA:
 
             # Extrase bancare
             if anul in rapoarte_grupate_pe_ani.extrase_bancare:
-                comisioane_diferente_schimb_valutar = (
-                    self.preia_comisioane_diferente_schimb_valutar_din_extrase_bancare(
+                cheltuieli_deductibile_din_extrase = (
+                    self.preia_cheltuieli_deductibile_din_extrase_bancare(
                         anul, rapoarte_grupate_pe_ani
                     )
                 )
-                rjip_pe_ani[anul].extend(comisioane_diferente_schimb_valutar)
+                rjip_pe_ani[anul].extend(cheltuieli_deductibile_din_extrase)
 
         return rjip_pe_ani
 
